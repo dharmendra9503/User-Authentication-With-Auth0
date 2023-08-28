@@ -4,16 +4,22 @@ block content
   div
     h1 External API
     p
-      | You use will use a button to call an external API using an access token, and the API will validate it using the API's audience value.
-      br
-      strong This route should be protected.
+      | Use these buttons to call an external API. The protected API call has an access token in its authorization header. The API server will validate the access token using the Auth0 Audience value.
     div(
       class="btn-group mt-5",
       role="group",
       aria-label="External API Requests Examples"
     )
-      button(type="button", class="btn btn-primary") Get Public Message
-      button(type="button", class="btn btn-primary") Get Protected Message
+      button(
+        type="button",
+        class="btn btn-primary"
+        onclick="window.location='/external-api/public-message'"
+      ) Get Public Message
+      button(
+        type="button",
+        class="btn btn-primary"
+        onclick="window.location='/external-api/protected-message'"
+      ) Get Protected Message
 
     if message
       div(class="mt-5")

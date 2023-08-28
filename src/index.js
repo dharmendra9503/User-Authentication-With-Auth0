@@ -4,7 +4,7 @@
 
 const express = require('express');
 const path = require('path');
-const { auth } = require('express-openid-connect');
+const { auth, requiresAuth  } = require('express-openid-connect');
 
 require("dotenv").config();
 
@@ -34,7 +34,12 @@ app.use(
     secret: process.env.SESSION_SECRET,
     authRequired: false,
     auth0Logout: true,
-  }),
+    clientSecret: process.env.CLIENT_SECRET,
+    authorizationParams: {
+      response_type: "code",
+      audience: process.env.AUTH0_AUDIENCE,
+    },
+  })
 );
 
 app.use((req, res, next) => {
@@ -55,14 +60,60 @@ app.get('/', (req, res) => {
 
 // > Profile
 
-app.get('/profile', (req, res) => {
-  res.render('profile');
+app.get('/profile', requiresAuth(), (req, res) => {
+  res.render('profile', {
+    user: req.oidc.user,
+    accessToken: req.oidc.accessToken
+  });
 });
 
 // > External API
 
 app.get('/external-api', (req, res) => {
   res.render('external-api');
+});
+
+app.get('/external-api/public-message', async (req, res) => {
+  let message;
+
+  try {
+    const gotModule = await import('got');
+    const got = gotModule.default; // Accessing the default export
+    const body = await got(
+      `${process.env.SERVER_URL}/api/messages/public-message`,
+    ).json();
+
+    message = body.message;
+  } catch (e) {
+    console.log(e);
+    message = 'Unable to retrieve message.';
+  }
+
+  res.render('external-api', { message });
+});
+
+app.get('/external-api/protected-message', requiresAuth(), async (req, res) => {
+  const { token_type, access_token } = req.oidc.accessToken;
+  let message;
+
+  try {
+    const gotModule = await import('got');
+    const got = gotModule.default; // Accessing the default export
+    const body = await got(
+      `${process.env.SERVER_URL}/api/messages/protected-message`,
+      {
+        headers: {
+          Authorization: `${token_type} ${access_token}`,
+        },
+      },
+    ).json();
+
+    message = body.message;
+  } catch (e) {
+    message = 'Unable to retrieve message.';
+  }
+
+  res.render('external-api', { message });
 });
 
 // > Authentication
